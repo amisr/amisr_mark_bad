@@ -23,6 +23,8 @@ import bokeh.plotting
 import argparse
 import sys
 import h5py
+import colorcet as cc
+
 __version__ = "0.0.1"
 
 def read_Nerti_beam(fitter_file):
@@ -174,10 +176,16 @@ slider_vmax = 15
 
 plot_width =850
 plot_height=500
-color_mapper = bokeh.models.mappers.LogColorMapper(palette="Viridis256", low=10**float(vmin), high=10**float(vmax))
+palette = "Viridis256"
+palette = cc.rainbow4
+
+color_mapper = bokeh.models.mappers.LogColorMapper(palette=palette, low=10**float(vmin), high=10**float(vmax))
 p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
                           x_range=[0, dw[0]], y_range=[y[0], y[0]+dh[0]])
 im = p.image(source=source_rti, color_mapper=color_mapper)
+
+cb = bokeh.models.ColorBar(color_mapper = color_mapper, location = (5,6))
+p.add_layout(cb, 'right')
 
 cwidth = 500
 
