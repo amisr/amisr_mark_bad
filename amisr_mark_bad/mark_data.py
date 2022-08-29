@@ -17,9 +17,12 @@ import os
 import shutil
 import filecmp
 import glob
+
 # Bokeh imports
 import bokeh
 import bokeh.plotting
+
+import datetime
 import argparse
 import sys
 import h5py
@@ -124,6 +127,8 @@ source_rect = bokeh.models.ColumnDataSource(data=dict(
 print(f"Number of beams: {BeamCodes.shape[0]}")
 x=[]
 dw=[]
+dt0=[]
+dt1=[]
 y=[]
 dh=[]
 image=[]
@@ -150,6 +155,8 @@ for i in range(BeamCodes.shape[0]):
     #print(np.diff(UnixTime[:,0]))
     x.append(0)
     dw.append(UnixTime[-1,-1]-UnixTime[0,0])
+    dt0.append(datetime.datetime.utcfromtimestamp(UnixTime[0,0]))
+    dt1.append(datetime.datetime.utcfromtimestamp(UnixTime[-1,-1]))
     y.append(valid_altitudes[0])
     dh.append(valid_altitudes[-1] - valid_altitudes[0])
     image.append(valid_Ne.T)
@@ -179,9 +186,12 @@ palette = "Viridis256"
 palette = cc.rainbow4
 
 color_mapper = bokeh.models.mappers.LogColorMapper(palette=palette, low=10**float(vmin), high=10**float(vmax))
+seconds_axis = bokeh.models.DataRange1d(0, dw[0],range_padding = 0)
 p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
-                          x_range=[0, dw[0]], y_range=[y[0], y[0]+dh[0]])
+                          x_range=seconds_axis, y_range=[y[0], y[0]+dh[0]])
 im = p.image(source=source_rti, color_mapper=color_mapper)
+p.x_range.renderers = [im] # specifying the renderers for the x_range
+p.xaxis.axis_label = 'seconds from experiment start (s)'
 
 cb = bokeh.models.ColorBar(color_mapper = color_mapper, location = (5,6))
 p.add_layout(cb, 'right')
