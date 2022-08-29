@@ -65,7 +65,6 @@ if maxbeams > 0:
 
 dirname = os.path.dirname(fitter_file)
 outfolder = os.path.join(dirname,'unblocked')
-os.makedirs(outfolder, exist_ok=True)
 if 'lp' in os.path.basename(fitter_file):
     block_file = os.path.join(outfolder,"block_lp.txt")
 elif 'ac' in os.path.basename(fitter_file):
@@ -219,6 +218,7 @@ p.toolbar.active_drag = box_edit_tool1
 
 def save_data():
     print(f"Saving: {block_file}")
+    os.makedirs(outfolder, exist_ok=True)
     with open(block_file,'w')as fp:
         for bcode,vals in block_dict.items():
             for x0,x1,y0,y1 in zip(vals['x0'],vals['x1'],vals['y0'],vals['y1']):
