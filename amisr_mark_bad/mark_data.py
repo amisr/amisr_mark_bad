@@ -29,14 +29,16 @@ import h5py
 import colorcet as cc
 
 __version__ = "0.0.2"
-
-def read_Nerti_beam(fitter_file):
+def read_Nerti_beam(fitter_file,param_group,param2plot):
+    parampath = '/'+param_group+'/'+param2plot
+    param_hts = '/'+param_group+'/Altitude'
+    print(f'Parameter to plot: {parampath}')
     with h5py.File(fitter_file,'r') as fp:
         BeamCodes = fp['/BeamCodes'][:]
-        Ne = fp['/FittedParams/Ne'][:]
-        Altitude = fp['/FittedParams/Altitude'][:]
+        param = fp[parampath][:]
+        Altitude = fp[param_hts][:]
         UnixTime = fp['/Time/UnixTime'][:]
-    return BeamCodes,UnixTime,Altitude,Ne
+    return BeamCodes,UnixTime,Altitude,param
 
 parser = argparse.ArgumentParser(description='get_rti_blocks',
                     epilog="Usage :"\
@@ -44,27 +46,32 @@ parser = argparse.ArgumentParser(description='get_rti_blocks',
 parser.add_argument('fitter_file', help='Fitted file.')
 parser.add_argument('--beam', type=int, default=0, help='Beam index to plot first.')
 parser.add_argument('--maxbeams', type=int, default=0, help='Maximum number of beams to load.')
-
+parser.add_argument('--param_group', action='store', type=str, default='FittedParams', help='Group of the parameter to plot.')
+parser.add_argument('--param2plot', action='store', type=str, default='Ne', help='Group of the parameter to plot.')
 args = parser.parse_args()
 
 fitter_file = args.fitter_file
 print(fitter_file)
-bmi=args.beam
+first_bmi=args.beam
+bmi = first_bmi
 maxbeams = args.maxbeams
+param_group = args.param_group
+param2plot = args.param2plot
 #bmi=0
 #maxbeams = 0
 
 print('File to use:',fitter_file)
 print('Beam to plot first:',bmi)
 try:
-    BeamCodes,UnixTime,Altitude,Ne = read_Nerti_beam(fitter_file)
+    BeamCodes,UnixTime,Altitude,Ne = read_Nerti_beam(fitter_file,param_group,param2plot)
 except Exception as e:
     print(e)
     sys.exit()
 print(f"BeamCodes.shape : {BeamCodes.shape}")
 
+bmis2show = list(range(BeamCodes.shape[0]))
 if maxbeams > 0:
-    BeamCodes = BeamCodes[:maxbeams]
+    bmis2show =  bmis2show[bmi:][:maxbeams]
 
 dirname = os.path.dirname(fitter_file)
 outfolder = os.path.join(dirname,'unblocked')
@@ -72,6 +79,8 @@ if 'lp' in os.path.basename(fitter_file):
     block_file = os.path.join(outfolder,"block_lp.txt")
 elif 'ac' in os.path.basename(fitter_file):
     block_file = os.path.join(outfolder,"block_ac.txt")
+elif 'bc' in os.path.basename(fitter_file):
+    block_file = os.path.join(outfolder,"block_bc.txt")
 
 
 block_dict = {}
@@ -144,7 +153,10 @@ def nangaps(UTime,Ne):
     else:
         return Ne
 
-for i in range(BeamCodes.shape[0]):
+dt0_tmp = datetime.datetime.utcfromtimestamp(UnixTime[0,0])
+dt1_tmp = datetime.datetime.utcfromtimestamp(UnixTime[-1,-1])
+total_nbms = BeamCodes.shape[0]
+for i in bmis2show:#range(BeamCodes.shape[0]):
     valid_hi = np.where(np.isfinite(Altitude[i,:]))[0]
     valid_altitudes = Altitude[i,valid_hi]/1e3
     valid_Ne = Ne[:,i,valid_hi]
@@ -156,9 +168,7 @@ for i in range(BeamCodes.shape[0]):
     #print(np.diff(UnixTime[:,0]))
     x.append(0)
     dw.append(UnixTime[-1,-1]-UnixTime[0,0])
-    dt0_tmp = datetime.datetime.utcfromtimestamp(UnixTime[0,0])
     dt0.append(dt0_tmp)
-    dt1_tmp = datetime.datetime.utcfromtimestamp(UnixTime[-1,-1])
     dt1.append(dt1_tmp)
     y.append(valid_altitudes[0])
     dh.append(valid_altitudes[-1] - valid_altitudes[0])
@@ -167,23 +177,25 @@ for i in range(BeamCodes.shape[0]):
     bmcode = BeamCodes[i][0]
     az = BeamCodes[i][1]
     el = BeamCodes[i][2]
-    tmp_title = f"bm:{bmcode} ({az:.2f} az, {el:.2f} el), {tmp_title}"
+    tmp_title = f"bm {i}/{total_nbms}, bmcode:{int(bmcode):d} ({az:.2f} az, {el:.2f} el), {tmp_title}"
     ptitle.append(tmp_title)
 
+bmi_index = bmis2show.index(bmi)
 source_rtis = bokeh.models.ColumnDataSource(data=dict(
                             image=image,
                             x=x,
                             y=y,
                             dw=dw,
                             dh=dh,
-                            ptitle=ptitle
+                            ptitle=ptitle,
+                            bmis2show=bmis2show
                             ))
 source_rti = bokeh.models.ColumnDataSource(data=dict(
-                            image=image[bmi:bmi+1],
-                            x=x[bmi:bmi+1],
-                            y=y[bmi:bmi+1],
-                            dw=dw[bmi:bmi+1],
-                            dh=dh[bmi:bmi+1]
+                            image=image[bmi_index:bmi_index+1],
+                            x=x[bmi_index:bmi_index+1],
+                            y=y[bmi_index:bmi_index+1],
+                            dw=dw[bmi_index:bmi_index+1],
+                            dh=dh[bmi_index:bmi_index+1]
                             ))
 vmin = "10"
 vmax = "12"
@@ -199,7 +211,7 @@ color_mapper = bokeh.models.mappers.LogColorMapper(palette=palette, low=10**floa
 seconds_axis = bokeh.models.DataRange1d(0, dw[0],range_padding = 0)
 p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
                           x_range=seconds_axis, y_range=[y[0], y[0]+dh[0]])
-p.title.text = ptitle[bmi]
+p.title.text = ptitle[bmi_index]
 im = p.image(source=source_rti, color_mapper=color_mapper)
 p.x_range.renderers = [im] # specifying the renderers for the x_range
 p.xaxis.axis_label = 'seconds from experiment start (s)'
@@ -489,13 +501,18 @@ slider_vmin_vmax.js_on_change('value',callback_slider)
 
 select_bmi = bokeh.models.Select(title="Beam:", value=f"{bmi}",
                   options=[(f"{i}", f"bm{i}: {BeamCodes[i,0]}")
-                      for i in range(BeamCodes.shape[0])],width=int(cwidth/4.))
-button_nextbm = bokeh.models.Button(label="next beam", button_type="success",width=int(cwidth/4.))
-if bmi ==0:
+                      for i in bmis2show],width=int(cwidth/4.))
+if bmi == first_bmi:
     prev_disabled = True
 else:
     prev_disabled = False
-button_prevbm = bokeh.models.Button(label="prev beam", button_type="success",width=int(cwidth/4.), 
+if bmi == bmis2show[-1]:
+    next_disabled = True
+else:
+    next_disabled = False
+button_nextbm = bokeh.models.Button(label="next beam", button_type="success",width=int(cwidth/4.),
+        disabled=next_disabled)
+button_prevbm = bokeh.models.Button(label="prev beam", button_type="success",width=int(cwidth/4.),
         disabled=prev_disabled)
 
 callback_changebmi = bokeh.models.CustomJS(args=dict(
@@ -503,44 +520,58 @@ callback_changebmi = bokeh.models.CustomJS(args=dict(
             title=p.title
         ), code = """
         var bmi = parseInt(select_bmi.value);
-        source_rti.data['image'][0] = source_rtis.data['image'][bmi]
-        source_rti.data['x'][0] = source_rtis.data['x'][bmi]
-        source_rti.data['y'][0] = source_rtis.data['y'][bmi]
-        source_rti.data['dw'][0] = source_rtis.data['dw'][bmi]
-        source_rti.data['dh'][0] = source_rtis.data['dh'][bmi]
-        title.text = source_rtis.data['ptitle'][bmi]
+        var bmis2show = source_rtis.data['bmis2show'];
+        console.log('bmis2show :' + bmis2show);
+        var bmi_index = bmis2show.indexOf(bmi);
+        console.log('bmi_index');
+        console.log(bmi_index);
+        source_rti.data['image'][0] = source_rtis.data['image'][bmi_index]
+        source_rti.data['x'][0] = source_rtis.data['x'][bmi_index]
+        source_rti.data['y'][0] = source_rtis.data['y'][bmi_index]
+        source_rti.data['dw'][0] = source_rtis.data['dw'][bmi_index]
+        source_rti.data['dh'][0] = source_rtis.data['dh'][bmi_index]
+        title.text = source_rtis.data['ptitle'][bmi_index]
         source_rti.change.emit();
         """)
 select_bmi.js_on_change('value',callback_changebmi)
 select_bmi.on_change('value',updatebmi)
 jscallback_next = bokeh.models.CustomJS(args=dict(
-    select_bmi=select_bmi,button_prevbm=button_prevbm,button_nextbm=button_nextbm), code =  """
+    select_bmi=select_bmi,button_prevbm=button_prevbm,button_nextbm=button_nextbm,
+                                        bmis2show=bmis2show), code =  """
         console.log('next beam pressed');
-        // console.log(select_bmi);
-        var bmi_orig = select_bmi.value;
+        var bmi_orig = parseInt(select_bmi.value);
         console.log('bmi was :' + bmi_orig);
-        var next_val_int = parseInt(bmi_orig) + 1;
+        console.log(bmis2show)
+        var bmi_orig_index = bmis2show.indexOf(bmi_orig);
+        console.log('bmi_orig_index : '+bmi_orig_index);
+        var next_val_int = parseInt(bmis2show[bmi_orig_index + 1]);
+        console.log('next_val_int : '+next_val_int);
         var next_val = next_val_int.toString();
+        console.log('next_val : '+ next_val);
         var last_index = parseInt(select_bmi.options.at(-1)[0]);
         if (next_val_int == last_index) {
             button_nextbm['disabled'] = true;
         }
-        if (next_val_int > 0) {
+        if (next_val_int > parseInt(bmis2show[0])) {
             console.log(button_prevbm);
             button_prevbm['disabled'] = false;
         }
         select_bmi.value = next_val;
-
+        console.log('done with next beam pressed');
     """)
 button_nextbm.js_on_click(jscallback_next)
 jscallback_prev = bokeh.models.CustomJS(args=dict(
-    select_bmi=select_bmi,button_prevbm=button_prevbm,button_nextbm=button_nextbm), code =  """
+    select_bmi=select_bmi,button_prevbm=button_prevbm,button_nextbm=button_nextbm,
+                                        bmis2show=bmis2show), code =  """
         console.log('prev beam pressed');
-        var bmi_orig = select_bmi.value;
-        var next_val_int = parseInt(bmi_orig) - 1;
+        var bmi_orig = parseInt(select_bmi.value);
+        console.log('bmi was :' + bmi_orig);
+        var bmi_orig_index = bmis2show.indexOf(bmi_orig);
+        var next_val_int = parseInt(bmis2show[bmi_orig_index - 1]);
         var next_val = next_val_int.toString();
+        console.log('next_val : '+ next_val);
         var last_index = parseInt(select_bmi.options.at(-1)[0]);
-        if (next_val_int == 0 ) {
+        if (next_val_int == parseInt(bmis2show[0]) ) {
             button_prevbm['disabled'] = true;
         }
         if (next_val_int < last_index) {
