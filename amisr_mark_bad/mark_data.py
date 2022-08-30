@@ -28,7 +28,7 @@ import sys
 import h5py
 import colorcet as cc
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 def read_Nerti_beam(fitter_file):
     with h5py.File(fitter_file,'r') as fp:
@@ -132,6 +132,7 @@ dt1=[]
 y=[]
 dh=[]
 image=[]
+ptitle = []
 
 def nangaps(UTime,Ne):
     t_diffs = np.diff(UTime[:,0])
@@ -155,18 +156,27 @@ for i in range(BeamCodes.shape[0]):
     #print(np.diff(UnixTime[:,0]))
     x.append(0)
     dw.append(UnixTime[-1,-1]-UnixTime[0,0])
-    dt0.append(datetime.datetime.utcfromtimestamp(UnixTime[0,0]))
-    dt1.append(datetime.datetime.utcfromtimestamp(UnixTime[-1,-1]))
+    dt0_tmp = datetime.datetime.utcfromtimestamp(UnixTime[0,0])
+    dt0.append(dt0_tmp)
+    dt1_tmp = datetime.datetime.utcfromtimestamp(UnixTime[-1,-1])
+    dt1.append(dt1_tmp)
     y.append(valid_altitudes[0])
     dh.append(valid_altitudes[-1] - valid_altitudes[0])
     image.append(valid_Ne.T)
+    tmp_title = dt0_tmp.strftime("%x %X - ") + dt1_tmp.strftime("%x %X")
+    bmcode = BeamCodes[i][0]
+    az = BeamCodes[i][1]
+    el = BeamCodes[i][2]
+    tmp_title = f"bm:{bmcode} ({az:.2f} az, {el:.2f} el), {tmp_title}"
+    ptitle.append(tmp_title)
 
 source_rtis = bokeh.models.ColumnDataSource(data=dict(
                             image=image,
                             x=x,
                             y=y,
                             dw=dw,
-                            dh=dh
+                            dh=dh,
+                            ptitle=ptitle
                             ))
 source_rti = bokeh.models.ColumnDataSource(data=dict(
                             image=image[bmi:bmi+1],
@@ -189,12 +199,31 @@ color_mapper = bokeh.models.mappers.LogColorMapper(palette=palette, low=10**floa
 seconds_axis = bokeh.models.DataRange1d(0, dw[0],range_padding = 0)
 p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
                           x_range=seconds_axis, y_range=[y[0], y[0]+dh[0]])
+p.title.text = ptitle[bmi]
 im = p.image(source=source_rti, color_mapper=color_mapper)
 p.x_range.renderers = [im] # specifying the renderers for the x_range
 p.xaxis.axis_label = 'seconds from experiment start (s)'
-
 cb = bokeh.models.ColorBar(color_mapper = color_mapper, location = (5,6))
 p.add_layout(cb, 'right')
+#second axis
+# trick: two invisible points at two diagonal opposite corners
+# or   : two invisible points at two points to the left and right limits
+#         put that have a common y axis point
+if True:
+    t_src = bokeh.models.ColumnDataSource({'x':[dt0[0],dt1[0]],'y':[y[0],y[0]]})
+    # range_padding needs to coincide with the range_padding of the main figure
+    p.extra_x_ranges={'t':bokeh.models.DataRange1d(range_padding = 0)}
+    x2_scale = bokeh.models.LinearAxis(x_range_name='t')
+    x2_scale.formatter=bokeh.models.DatetimeTickFormatter()
+    x2_scale.ticker = bokeh.models.DatetimeTicker()
+    x2_scale.axis_label = "time (UT)"
+    p.add_layout(x2_scale,'above')
+    #second axis renderer, and tell it to plot on the 'r' y_range_name
+    tg = bokeh.models.Scatter(x='x',y='y')
+    tt = p.add_glyph(t_src,tg,x_range_name='t')
+    tt.visible = False
+    #THEN, now that that renderer is instantiated, tell the y_range['r'] to follow it
+    p.extra_x_ranges['t'].renderers=[tt]
 
 cwidth = 500
 
@@ -470,7 +499,8 @@ button_prevbm = bokeh.models.Button(label="prev beam", button_type="success",wid
         disabled=prev_disabled)
 
 callback_changebmi = bokeh.models.CustomJS(args=dict(
-            source_rti=source_rti,source_rtis=source_rtis,select_bmi=select_bmi
+            source_rti=source_rti,source_rtis=source_rtis,select_bmi=select_bmi,
+            title=p.title
         ), code = """
         var bmi = parseInt(select_bmi.value);
         source_rti.data['image'][0] = source_rtis.data['image'][bmi]
@@ -478,6 +508,7 @@ callback_changebmi = bokeh.models.CustomJS(args=dict(
         source_rti.data['y'][0] = source_rtis.data['y'][bmi]
         source_rti.data['dw'][0] = source_rtis.data['dw'][bmi]
         source_rti.data['dh'][0] = source_rtis.data['dh'][bmi]
+        title.text = source_rtis.data['ptitle'][bmi]
         source_rti.change.emit();
         """)
 select_bmi.js_on_change('value',callback_changebmi)
