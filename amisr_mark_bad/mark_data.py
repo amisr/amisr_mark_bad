@@ -378,6 +378,18 @@ def really_stop():
 def stop_server(event):
     print("Stopping the server from the browser")
     messagediv.text = "Stoping server..."
+    button_nextbm.disabled = True
+    button_prevbm.disabled = True
+    stop_button.disabled = True
+    button1.disabled = True
+    button2.disabled = True
+    button3.disabled = True
+    button4.disabled = True
+    button5.disabled = True
+    slider_vmin_vmax.disabled = True
+    input_vmin.disabled = True
+    input_vmax.disabled = True
+    select_bmi.disabled = True
     bokeh.io.curdoc().add_next_tick_callback(really_stop)
 
 def table_changed(source_rect,block_dict):
