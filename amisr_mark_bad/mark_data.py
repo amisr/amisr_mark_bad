@@ -369,6 +369,17 @@ def b5savedata(event):
     save_data()
     print("done.")
 
+# https://stackoverflow.com/questions/59196855/python-bokeh-markup-text-value-cant-update
+# need a second callback
+def really_stop():
+    print("Now sending command to kill the app")
+    sys.exit()  # Stop the server
+
+def stop_server(event):
+    print("Stopping the server from the browser")
+    messagediv.text = "Stoping server..."
+    bokeh.io.curdoc().add_next_tick_callback(really_stop)
+
 def table_changed(source_rect,block_dict):
     bmi = int(select_bmi.value)
     bcode = BeamCodes[bmi,0]
@@ -582,11 +593,19 @@ jscallback_prev = bokeh.models.CustomJS(args=dict(
     """)
 button_prevbm.js_on_click(jscallback_prev)
 
+# Button to stop the server
+stop_button = bokeh.models.Button(label="Stop Server", button_type="success",
+        width=int(cwidth/4.))
+stop_button.on_click(stop_server)
+
+messagediv = bokeh.models.widgets.Div(text="Server started.",
+                        width=int(cwidth/4.), height=int(cwidth/8.))
 
 buttons = bokeh.layouts.column(button1,button2,button3,button4,button5)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
 data_ctrl = bokeh.layouts.row(
-        bokeh.layouts.column(select_bmi,button_prevbm,button_nextbm,input_vmin,input_vmax,slider_vmin_vmax)
+        bokeh.layouts.column(select_bmi,button_prevbm,button_nextbm,
+            input_vmin,input_vmax,slider_vmin_vmax,stop_button,messagediv)
         ,p
     )
 col = bokeh.layouts.column(data_ctrl,blocks_ctrl)
