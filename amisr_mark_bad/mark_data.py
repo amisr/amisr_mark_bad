@@ -17,6 +17,7 @@ import os
 import shutil
 import filecmp
 import glob
+import signal
 
 # Bokeh imports
 import bokeh
@@ -375,8 +376,7 @@ def really_stop():
     print("Now sending command to kill the app")
     sys.exit()  # Stop the server
 
-def stop_server(event):
-    print("Stopping the server from the browser")
+def disable_all():
     messagediv.text = "Stoping server..."
     button_nextbm.disabled = True
     button_prevbm.disabled = True
@@ -390,7 +390,19 @@ def stop_server(event):
     input_vmin.disabled = True
     input_vmax.disabled = True
     select_bmi.disabled = True
+
+
+def stop_server(event):
+    print("Stopping the server from the browser")
+    disable_all()
     bokeh.io.curdoc().add_next_tick_callback(really_stop)
+
+def signal_handler(signal, frame):
+    print("signal.SIGINT has been received")
+    #disable_all()
+    really_stop()
+
+signal.signal(signal.SIGINT, signal_handler)
 
 def table_changed(source_rect,block_dict):
     bmi = int(select_bmi.value)

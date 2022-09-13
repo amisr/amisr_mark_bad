@@ -38,15 +38,19 @@ def main(args=None):
             f"--beam {beam} --maxbeams {maxbeams} {parsed_args.fitter_file}"
     command_line = f"bokeh serve {portcmd} {appfile} {argscmd}"
     print(f"cmd:{command_line}")
-    process = subprocess.Popen( shlex.split(command_line),bufsize=1)
+    try:
+        process = subprocess.Popen( shlex.split(command_line),bufsize=1)
+        process.wait()
+    except KeyboardInterrupt:
+        process.send_signal(signal.SIGINT)
+        process.wait()
+    #def signal_handler(signal, frame):
+    #    print('You pressed Ctrl+C!')
+    #    sys.exit(0)
 
-    def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
-        sys.exit(0)
+    #signal.signal(signal.SIGINT, signal_handler)
+    #print('Press Ctrl+C')
 
-    signal.signal(signal.SIGINT, signal_handler)
-    print('Press Ctrl+C')
-
-    signal.pause()
+    #signal.pause()
 if __name__ == "__main__":
     main()
