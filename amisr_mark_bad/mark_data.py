@@ -401,6 +401,8 @@ def signal_handler(signal, frame):
     print("signal.SIGINT has been received")
     #disable_all()
     really_stop()
+def on_session_destroyed(session_context):
+    print("on session destroyed")
 
 signal.signal(signal.SIGINT, signal_handler)
 
