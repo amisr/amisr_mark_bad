@@ -18,6 +18,7 @@ import shutil
 import filecmp
 import glob
 import signal
+from functools import partial
 
 # Bokeh imports
 import bokeh
@@ -37,9 +38,38 @@ def read_Nerti_beam(fitter_file,param_group,param2plot):
     with h5py.File(fitter_file,'r') as fp:
         BeamCodes = fp['/BeamCodes'][:]
         param = fp[parampath][:]
+        recs,nbeams,oldalts = param.shape
         Altitude = fp[param_hts][:]
+        print("param",param.shape)
+        print("Altitude",Altitude.shape)
+        nbeams,nhts0 = Altitude.shape
+        newhts = []
+        maxalts = 0
+        for bmi in range(nbeams):
+            hmindiff = np.nanmin(np.diff(Altitude[bmi,:]))
+            validAlts = np.where(np.isfinite(Altitude[bmi,:]))[0]
+            valid_i0 = validAlts[0]
+            valid_i1 = validAlts[-1]
+            newhts_tmp = np.arange(Altitude[bmi,valid_i0],Altitude[bmi,valid_i1]+hmindiff,hmindiff)
+            if len(newhts_tmp)>maxalts:
+                maxalts = len(newhts_tmp)
+            newhts.append(newhts_tmp)
+        param_interp = np.empty((recs,nbeams,maxalts))*np.nan
+        Alts_interp = np.empty((nbeams,maxalts)) * np.nan
+        for bmi in range(nbeams):
+            htsi = len(newhts[bmi])
+            Alts_interp[bmi,:htsi] = newhts[bmi]
+            for rec0 in range(recs):
+                for hti, h0 in enumerate(newhts[bmi]):
+                    validAlts = np.where(np.isfinite(Altitude[bmi,:]))[0]
+                    orig_hi = np.where(h0 >= Altitude[bmi][validAlts])[0][-1]
+                    param_interp[rec0,bmi,hti] = param[rec0,bmi,orig_hi]
         UnixTime = fp['/Time/UnixTime'][:]
-    return BeamCodes,UnixTime,Altitude,param
+        # fix short start and end
+        tdiff = np.nanmedian(UnixTime[:,1]-UnixTime[:,0])
+        UnixTime[-1,1] = UnixTime[-1,0] + tdiff
+        UnixTime[0,0] = UnixTime[0,1] -  tdiff
+    return BeamCodes,UnixTime,Alts_interp,param_interp
 
 parser = argparse.ArgumentParser(description='get_rti_blocks',
                     epilog="Usage :"\
@@ -74,14 +104,32 @@ bmis2show = list(range(BeamCodes.shape[0]))
 if maxbeams > 0:
     bmis2show =  bmis2show[bmi:][:maxbeams]
 
+def get_sintg(fname):
+    bname = os.path.basename(fname)
+    minloc = bname.find('min')
+    if minloc>=0:
+        numloc = (bname[:minloc]).rfind("_")
+        return "_"+bname[numloc+1:minloc]+"min"
+    else:
+        secloc = bname.find('sec')
+        if secloc>=0:
+            numloc = (bname[:secloc]).rfind("_")
+            return "_"+bname[numloc+1:seloc]+"sec"
+        else:
+            return ""
 dirname = os.path.dirname(fitter_file)
 outfolder = os.path.join(dirname,'unblocked')
+trimfolder = os.path.join(dirname,'untrimmed')
+sintg = get_sintg(fitter_file)
 if 'lp' in os.path.basename(fitter_file):
-    block_file = os.path.join(outfolder,"block_lp.txt")
+    block_file = os.path.join(outfolder,f"block_lp{sintg}.txt")
+    trim_file = os.path.join(trimfolder,f"trim_lp{sintg}.txt")
 elif 'ac' in os.path.basename(fitter_file):
-    block_file = os.path.join(outfolder,"block_ac.txt")
+    block_file = os.path.join(outfolder,f"block_ac{sintg}.txt")
+    trim_file = os.path.join(trimfolder,f"trim_ac{sintg}.txt")
 elif 'bc' in os.path.basename(fitter_file):
-    block_file = os.path.join(outfolder,"block_bc.txt")
+    block_file = os.path.join(outfolder,f"block_bc{sintg}.txt")
+    trim_file = os.path.join(trimfolder,f"trim_bc{sintg}.txt")
 
 
 block_dict = {}
@@ -263,6 +311,8 @@ button2 = bokeh.models.Button(label="erase all", button_type="success")
 button3 = bokeh.models.Button(label="unselect", button_type="success")
 button4 = bokeh.models.Button(label="Copy to all beams", button_type="success")
 button5 = bokeh.models.Button(label="Save data", button_type="success")
+button6 = bokeh.models.Button(label="Trim data before x0", button_type="success")
+button7 = bokeh.models.Button(label="Trim data after x0", button_type="success")
 
 box_edit_tool1 = bokeh.models.BoxEditTool(renderers=[r1])
 p.add_tools(box_edit_tool1)
@@ -275,6 +325,21 @@ def save_data():
         for bcode,vals in block_dict.items():
             for x0,x1,y0,y1 in zip(vals['x0'],vals['x1'],vals['y0'],vals['y1']):
                 fp.write(f"{bcode} {x0} {x1} {y0} {y1}\n")
+
+def trimdata(mode="after"):
+    for bcode,vals in block_dict.items():
+        x0 = vals['x0'][0]
+    if os.path.basename(fitter_file).find('_bc')<0:
+        trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file} {x0}"
+    else:
+        trimcommand = f"python /opt/src/cleanfit/nepow/trim_file.py {fitter_file} {x0}"
+
+    if mode=="before":
+        trimcommand += " 0"
+    print(f"saving command to {trim_file}:{trimcommand}")
+    os.makedirs(trimfolder, exist_ok=True)
+    with open(trim_file,'w') as fp:
+        fp.write(trimcommand)
 
 def update_rects(datadict):
     source_rect.data.update(datadict)
@@ -370,6 +435,7 @@ def b5savedata(event):
     save_data()
     print("done.")
 
+
 # https://stackoverflow.com/questions/59196855/python-bokeh-markup-text-value-cant-update
 # need a second callback
 def really_stop():
@@ -386,6 +452,8 @@ def disable_all():
     button3.disabled = True
     button4.disabled = True
     button5.disabled = True
+    button6.disabled = True
+    button7.disabled = True
     slider_vmin_vmax.disabled = True
     input_vmin.disabled = True
     input_vmax.disabled = True
@@ -491,11 +559,14 @@ def updatebmi(attr, old, new):
                     y1=y1)
     update_rects(datadict)
 
+
 button1.on_click(b1delete_selected)
 button2.on_click(b2erase_all)
 button3.on_click(b3unselect)
 button4.on_click(b4copy2allbeams)
 button5.on_click(b5savedata)
+button6.on_click(partial(trimdata, mode="before"))
+button7.on_click(partial(trimdata, mode="after"))
 source_rect.on_change('data', on_change_data_source)
 
 
@@ -627,7 +698,7 @@ stop_button.on_click(stop_server)
 messagediv = bokeh.models.widgets.Div(text="Server started.",
                         width=int(cwidth/4.), height=int(cwidth/8.))
 
-buttons = bokeh.layouts.column(button1,button2,button3,button4,button5)
+buttons = bokeh.layouts.column(button1,button2,button3,button4,button5,button6,button7)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
 data_ctrl = bokeh.layouts.row(
         bokeh.layouts.column(select_bmi,button_prevbm,button_nextbm,
