@@ -306,13 +306,16 @@ table_height = 250
 data_table = bokeh.models.DataTable(source=source_rect, columns=columns,
                                     width=table_width, height=table_height,
                                    auto_edit=True, editable=True)
-button1 = bokeh.models.Button(label="Delete selected row(s)", button_type="success")
-button2 = bokeh.models.Button(label="erase all", button_type="success")
-button3 = bokeh.models.Button(label="unselect", button_type="success")
-button4 = bokeh.models.Button(label="Copy to all beams", button_type="success")
-button5 = bokeh.models.Button(label="Save data", button_type="success")
-button6 = bokeh.models.Button(label="Trim data before x0", button_type="success")
-button7 = bokeh.models.Button(label="Trim data after x0", button_type="success")
+cwidth2 = int(cwidth/3.)
+button_delete_rows = bokeh.models.Button(label="Delete selected row(s)", button_type="success",width=cwidth2)
+button_erase_all = bokeh.models.Button(label="erase all", button_type="success",width=cwidth2)
+button_unselect = bokeh.models.Button(label="unselect", button_type="success",width=cwidth2)
+button_copy2all = bokeh.models.Button(label="Copy to all beams", button_type="success",width=cwidth2)
+button_save_nanfile = bokeh.models.Button(label="Save data", button_type="success",width=cwidth2)
+button_trimbeforex0 = bokeh.models.Button(label="Trim data before x0", button_type="success",width=cwidth2)
+button_trimafterx0 = bokeh.models.Button(label="Trim data after x0", button_type="success",width=cwidth2)
+button_y0_0 = bokeh.models.Button(label="Set all y0 = 0", button_type="success",width=cwidth2)
+button_y1_1000 = bokeh.models.Button(label="Set all y1 = 1000", button_type="success",width=cwidth2)
 
 box_edit_tool1 = bokeh.models.BoxEditTool(renderers=[r1])
 p.add_tools(box_edit_tool1)
@@ -447,13 +450,15 @@ def disable_all():
     button_nextbm.disabled = True
     button_prevbm.disabled = True
     stop_button.disabled = True
-    button1.disabled = True
-    button2.disabled = True
-    button3.disabled = True
-    button4.disabled = True
-    button5.disabled = True
-    button6.disabled = True
-    button7.disabled = True
+    button_delete_rows.disabled = True
+    button_erase_all.disabled = True
+    button_unselect.disabled = True
+    button_copy2all.disabled = True
+    button_save_nanfile.disabled = True
+    button_trimbeforex0.disabled = True
+    button_trimafterx0.disabled = True
+    button_y0_0.disabled = True
+    button_y1_1000.disabled = True
     slider_vmin_vmax.disabled = True
     input_vmin.disabled = True
     input_vmax.disabled = True
@@ -560,13 +565,13 @@ def updatebmi(attr, old, new):
     update_rects(datadict)
 
 
-button1.on_click(b1delete_selected)
-button2.on_click(b2erase_all)
-button3.on_click(b3unselect)
-button4.on_click(b4copy2allbeams)
-button5.on_click(b5savedata)
-button6.on_click(partial(trimdata, mode="before"))
-button7.on_click(partial(trimdata, mode="after"))
+button_delete_rows.on_click(b1delete_selected)
+button_erase_all.on_click(b2erase_all)
+button_unselect.on_click(b3unselect)
+button_copy2all.on_click(b4copy2allbeams)
+button_save_nanfile.on_click(b5savedata)
+button_trimbeforex0.on_click(partial(trimdata, mode="before"))
+button_trimafterx0.on_click(partial(trimdata, mode="after"))
 source_rect.on_change('data', on_change_data_source)
 
 
@@ -698,7 +703,9 @@ stop_button.on_click(stop_server)
 messagediv = bokeh.models.widgets.Div(text="Server started.",
                         width=int(cwidth/4.), height=int(cwidth/8.))
 
-buttons = bokeh.layouts.column(button1,button2,button3,button4,button5,button6,button7)
+buttons_c1 = bokeh.layouts.column(button_delete_rows,button_erase_all,button_unselect,button_copy2all,button_save_nanfile)
+buttons_c2 = bokeh.layouts.column(button_trimbeforex0,button_trimafterx0,button_y0_0,button_y1_1000)
+buttons = bokeh.layouts.row(buttons_c1, buttons_c2)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
 data_ctrl = bokeh.layouts.row(
         bokeh.layouts.column(select_bmi,button_prevbm,button_nextbm,
