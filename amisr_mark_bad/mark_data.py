@@ -222,11 +222,11 @@ for i in bmis2show:#range(BeamCodes.shape[0]):
     y.append(valid_altitudes[0])
     dh.append(valid_altitudes[-1] - valid_altitudes[0])
     image.append(valid_Ne.T)
-    tmp_title = dt0_tmp.strftime("%x %X - ") + dt1_tmp.strftime("%x %X")
+    tmp_title = dt0_tmp.strftime("%x %X - ") + dt1_tmp.strftime("%x %X, ") +os.path.basename(fitter_file)
     bmcode = BeamCodes[i][0]
     az = BeamCodes[i][1]
     el = BeamCodes[i][2]
-    tmp_title = f"bm {i}/{total_nbms}, bmcode:{int(bmcode):d} ({az:.2f} az, {el:.2f} el), {tmp_title}"
+    tmp_title = f"bm {i}/{total_nbms}, bmc:{int(bmcode):d} ({az:.2f} az, {el:.2f} el), {tmp_title}"
     ptitle.append(tmp_title)
 
 bmi_index = bmis2show.index(bmi)
