@@ -307,15 +307,16 @@ data_table = bokeh.models.DataTable(source=source_rect, columns=columns,
                                     width=table_width, height=table_height,
                                    auto_edit=True, editable=True)
 cwidth2 = int(cwidth/3.)
-button_delete_rows = bokeh.models.Button(label="Delete selected row(s)", button_type="success",width=cwidth2)
+button_delete_selected = bokeh.models.Button(label="Delete selected row(s)", button_type="success",width=cwidth2)
 button_erase_all = bokeh.models.Button(label="erase all", button_type="success",width=cwidth2)
 button_unselect = bokeh.models.Button(label="unselect", button_type="success",width=cwidth2)
 button_copy2all = bokeh.models.Button(label="Copy to all beams", button_type="success",width=cwidth2)
 button_save_nanfile = bokeh.models.Button(label="Save data", button_type="success",width=cwidth2)
 button_trimbeforex0 = bokeh.models.Button(label="Trim data before x0", button_type="success",width=cwidth2)
 button_trimafterx0 = bokeh.models.Button(label="Trim data after x0", button_type="success",width=cwidth2)
-button_y0_0 = bokeh.models.Button(label="Set all y0 = 0", button_type="success",width=cwidth2)
-button_y1_1000 = bokeh.models.Button(label="Set all y1 = 1000", button_type="success",width=cwidth2)
+button_y0_0_y1_1000 = bokeh.models.Button(label="Selected y0 = 0,y1=1000", button_type="success",width=cwidth2)
+button_y1_1000 = bokeh.models.Button(label="Selected y1 = 1000", button_type="success",width=cwidth2)
+button_convert2ints = bokeh.models.Button(label="Convert 2 ints", button_type="success",width=cwidth2)
 
 box_edit_tool1 = bokeh.models.BoxEditTool(renderers=[r1])
 p.add_tools(box_edit_tool1)
@@ -361,6 +362,26 @@ def update_blocks_dict():
     block_dict[bcode]['y0'] = y - height/2
     block_dict[bcode]['y1'] = y + height/2
     print(block_dict[bcode])
+
+def set_selected_2val(cols="y0", vals=0):
+    #for selected_i in source_rect.selected.indices:
+    #    
+    print(f"selected rows {cols} to {vals}")
+    print((source_rect.selected.indices))
+    if len(source_rect.selected.indices)>0:
+        for col,val in zip(cols,vals):
+            source_rect.data[col][source_rect.selected.indices] = val
+        update_rects(source_rect.data)
+    source_rect.selected.indices = []
+
+def convert2ints():
+    print("converting x0,x1,y0,y1 to integers")
+    print((source_rect.selected.indices))
+    if len(source_rect.selected.indices)>0:
+       for col in ["x0","x1","y0","y1"]:
+           print(source_rect.data[col][source_rect.selected.indices])
+       # update_rects(source_rect.data)
+    source_rect.selected.indices = []
 
 def b1delete_selected(event):
     print("delete selected rows")
@@ -450,14 +471,15 @@ def disable_all():
     button_nextbm.disabled = True
     button_prevbm.disabled = True
     stop_button.disabled = True
-    button_delete_rows.disabled = True
+    button_delete_selected.disabled = True
     button_erase_all.disabled = True
     button_unselect.disabled = True
     button_copy2all.disabled = True
     button_save_nanfile.disabled = True
     button_trimbeforex0.disabled = True
     button_trimafterx0.disabled = True
-    button_y0_0.disabled = True
+    button_y0_0_y1_1000.disabled = True
+    button_convert2ints.disabled = True
     button_y1_1000.disabled = True
     slider_vmin_vmax.disabled = True
     input_vmin.disabled = True
@@ -565,13 +587,17 @@ def updatebmi(attr, old, new):
     update_rects(datadict)
 
 
-button_delete_rows.on_click(b1delete_selected)
+button_delete_selected.on_click(b1delete_selected)
 button_erase_all.on_click(b2erase_all)
 button_unselect.on_click(b3unselect)
 button_copy2all.on_click(b4copy2allbeams)
 button_save_nanfile.on_click(b5savedata)
 button_trimbeforex0.on_click(partial(trimdata, mode="before"))
 button_trimafterx0.on_click(partial(trimdata, mode="after"))
+button_y0_0_y1_1000.on_click(partial(set_selected_2val, cols=["y0","y1"], vals=[0,1000]))
+button_y1_1000.on_click(partial(set_selected_2val, cols=["y1"], vals=[1000]))
+button_convert2ints.on_click(convert2ints)
+
 source_rect.on_change('data', on_change_data_source)
 
 
@@ -703,8 +729,8 @@ stop_button.on_click(stop_server)
 messagediv = bokeh.models.widgets.Div(text="Server started.",
                         width=int(cwidth/4.), height=int(cwidth/8.))
 
-buttons_c1 = bokeh.layouts.column(button_delete_rows,button_erase_all,button_unselect,button_copy2all,button_save_nanfile)
-buttons_c2 = bokeh.layouts.column(button_trimbeforex0,button_trimafterx0,button_y0_0,button_y1_1000)
+buttons_c1 = bokeh.layouts.column(button_delete_selected,button_erase_all,button_unselect,button_copy2all,button_save_nanfile)
+buttons_c2 = bokeh.layouts.column(button_trimbeforex0,button_trimafterx0,button_y0_0_y1_1000,button_y1_1000,button_convert2ints)
 buttons = bokeh.layouts.row(buttons_c1, buttons_c2)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
 data_ctrl = bokeh.layouts.row(
