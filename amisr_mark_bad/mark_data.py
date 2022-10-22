@@ -107,14 +107,17 @@ if maxbeams > 0:
 def get_sintg(fname):
     bname = os.path.basename(fname)
     minloc = bname.find('min')
+    print(f"Location of min: minloc={minloc}")
     if minloc>=0:
         numloc = (bname[:minloc]).rfind("_")
         return "_"+bname[numloc+1:minloc]+"min"
     else:
+        print("No min found")
         secloc = bname.find('sec')
+        print(f"Location of sec: secloc={secloc}")
         if secloc>=0:
             numloc = (bname[:secloc]).rfind("_")
-            return "_"+bname[numloc+1:seloc]+"sec"
+            return "_"+bname[numloc+1:secloc]+"sec"
         else:
             return ""
 dirname = os.path.dirname(fitter_file)
@@ -379,8 +382,9 @@ def convert2ints():
     print((source_rect.selected.indices))
     if len(source_rect.selected.indices)>0:
        for col in ["x0","x1","y0","y1"]:
-           print(source_rect.data[col][source_rect.selected.indices])
-       # update_rects(source_rect.data)
+           tmp = source_rect.data[col][source_rect.selected.indices]
+           source_rect.data[col][source_rect.selected.indices] = np.round(tmp)
+       update_rects(source_rect.data)
     source_rect.selected.indices = []
 
 def b1delete_selected(event):
