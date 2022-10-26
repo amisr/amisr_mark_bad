@@ -97,7 +97,14 @@ try:
     BeamCodes,UnixTime,Altitude,Ne = read_Nerti_beam(fitter_file,param_group,param2plot)
 except Exception as e:
     print(e)
-    sys.exit()
+    print("Trying --param_group NeFromPower --param2plot Ne_NoTr")
+    param_group = "NeFromPower"
+    param2plot = "Ne_NoTr"
+    try:
+        BeamCodes,UnixTime,Altitude,Ne = read_Nerti_beam(fitter_file,param_group,param2plot)
+    except Exception as e:
+        print(e)
+        sys.exit()
 print(f"BeamCodes.shape : {BeamCodes.shape}")
 
 bmis2show = list(range(BeamCodes.shape[0]))
@@ -315,8 +322,8 @@ button_erase_all = bokeh.models.Button(label="erase all", button_type="success",
 button_unselect = bokeh.models.Button(label="unselect", button_type="success",width=cwidth2)
 button_copy2all = bokeh.models.Button(label="Copy to all beams", button_type="success",width=cwidth2)
 button_save_nanfile = bokeh.models.Button(label="Save data", button_type="success",width=cwidth2)
-button_trimbeforex0 = bokeh.models.Button(label="Trim data before x0", button_type="success",width=cwidth2)
-button_trimafterx0 = bokeh.models.Button(label="Trim data after x0", button_type="success",width=cwidth2)
+button_trimbeforex1 = bokeh.models.Button(label="Trim data before max(x1)", button_type="success",width=cwidth2)
+button_trimafterx0 = bokeh.models.Button(label="Trim data after min(x0)", button_type="success",width=cwidth2)
 button_y0_0_y1_1000 = bokeh.models.Button(label="Selected y0 = 0,y1=1000", button_type="success",width=cwidth2)
 button_y1_1000 = bokeh.models.Button(label="Selected y1 = 1000", button_type="success",width=cwidth2)
 button_convert2ints = bokeh.models.Button(label="Convert 2 ints", button_type="success",width=cwidth2)
@@ -334,15 +341,24 @@ def save_data():
                 fp.write(f"{bcode} {x0} {x1} {y0} {y1}\n")
 
 def trimdata(mode="after"):
+    x0_min = 1e99
+    x1_max = -1e99
     for bcode,vals in block_dict.items():
-        x0 = vals['x0'][0]
+        x0 = min(vals['x0'])
+        if x0 < x0_min:
+            x0_min = x0
+        x1 = max(vals['x1'])
+        if x1 > x1_max:
+            x1_max = x1
     if os.path.basename(fitter_file).find('_bc')<0:
-        trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file} {x0}"
+        trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file}"
     else:
-        trimcommand = f"python /opt/src/cleanfit/nepow/trim_file.py {fitter_file} {x0}"
+        trimcommand = f"python /opt/src/cleanfit/nepow/trim_file.py {fitter_file}"
 
-    if mode=="before":
-        trimcommand += " 0"
+    if mode == "before":
+        trimcommand += f" {x1_max} 0"
+    if mode == "after":
+        trimcommand += f" {x0_min}"
     print(f"saving command to {trim_file}:{trimcommand}")
     os.makedirs(trimfolder, exist_ok=True)
     with open(trim_file,'w') as fp:
@@ -480,7 +496,7 @@ def disable_all():
     button_unselect.disabled = True
     button_copy2all.disabled = True
     button_save_nanfile.disabled = True
-    button_trimbeforex0.disabled = True
+    button_trimbeforex1.disabled = True
     button_trimafterx0.disabled = True
     button_y0_0_y1_1000.disabled = True
     button_convert2ints.disabled = True
@@ -596,7 +612,7 @@ button_erase_all.on_click(b2erase_all)
 button_unselect.on_click(b3unselect)
 button_copy2all.on_click(b4copy2allbeams)
 button_save_nanfile.on_click(b5savedata)
-button_trimbeforex0.on_click(partial(trimdata, mode="before"))
+button_trimbeforex1.on_click(partial(trimdata, mode="before"))
 button_trimafterx0.on_click(partial(trimdata, mode="after"))
 button_y0_0_y1_1000.on_click(partial(set_selected_2val, cols=["y0","y1"], vals=[0,1000]))
 button_y1_1000.on_click(partial(set_selected_2val, cols=["y1"], vals=[1000]))
@@ -733,8 +749,16 @@ stop_button.on_click(stop_server)
 messagediv = bokeh.models.widgets.Div(text="Server started.",
                         width=int(cwidth/4.), height=int(cwidth/8.))
 
-buttons_c1 = bokeh.layouts.column(button_delete_selected,button_erase_all,button_unselect,button_copy2all,button_save_nanfile)
-buttons_c2 = bokeh.layouts.column(button_trimbeforex0,button_trimafterx0,button_y0_0_y1_1000,button_y1_1000,button_convert2ints)
+buttons_c1 = bokeh.layouts.column(button_delete_selected,
+                                  button_erase_all,
+                                  button_unselect,
+                                  button_copy2all,
+                                  button_save_nanfile)
+buttons_c2 = bokeh.layouts.column(button_trimbeforex1,
+                                  button_trimafterx0,
+                                  button_y0_0_y1_1000,
+                                  button_y1_1000,
+                                  button_convert2ints)
 buttons = bokeh.layouts.row(buttons_c1, buttons_c2)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
 data_ctrl = bokeh.layouts.row(
