@@ -131,13 +131,13 @@ dirname = os.path.dirname(fitter_file)
 outfolder = os.path.join(dirname,'unblocked')
 trimfolder = os.path.join(dirname,'untrimmed')
 sintg = get_sintg(fitter_file)
-if 'lp' in os.path.basename(fitter_file):
+if 'lp' in os.path.basename(fitter_file).lower():
     block_file = os.path.join(outfolder,f"block_lp{sintg}.txt")
     trim_file = os.path.join(trimfolder,f"trim_lp{sintg}.txt")
-elif 'ac' in os.path.basename(fitter_file):
+elif 'ac' in os.path.basename(fitter_file).lower():
     block_file = os.path.join(outfolder,f"block_ac{sintg}.txt")
     trim_file = os.path.join(trimfolder,f"trim_ac{sintg}.txt")
-elif 'bc' in os.path.basename(fitter_file):
+elif 'bc' in os.path.basename(fitter_file).lower():
     block_file = os.path.join(outfolder,f"block_bc{sintg}.txt")
     trim_file = os.path.join(trimfolder,f"trim_bc{sintg}.txt")
 
@@ -261,7 +261,9 @@ vmax = "12"
 slider_vmin = 8
 slider_vmax = 15
 
-plot_width =850
+#plot_width =850
+#plot_height=500
+plot_width =1500
 plot_height=500
 palette = "Viridis256"
 palette = cc.rainbow4
@@ -272,6 +274,9 @@ p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
                           x_range=seconds_axis, y_range=[y[0], y[0]+dh[0]])
 p.title.text = ptitle[bmi_index]
 im = p.image(source=source_rti, color_mapper=color_mapper)
+p.toolbar.active_scroll = p.select_one(bokeh.models.WheelZoomTool)
+plot_width =850
+plot_height=500
 p.x_range.renderers = [im] # specifying the renderers for the x_range
 p.xaxis.axis_label = 'seconds from experiment start (s)'
 cb = bokeh.models.ColorBar(color_mapper = color_mapper, location = (5,6))
@@ -350,10 +355,12 @@ def trimdata(mode="after"):
         x1 = max(vals['x1'])
         if x1 > x1_max:
             x1_max = x1
-    if os.path.basename(fitter_file).find('_bc')<0:
-        trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file}"
-    else:
-        trimcommand = f"python /opt/src/cleanfit/nepow/trim_file.py {fitter_file}"
+    #if os.path.basename(fitter_file).find('_bc')<0:
+    #    trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file}"
+    #else:
+    #    trimcommand = f"python /opt/src/cleanfit/nepow/trim_file.py {fitter_file}"
+    # the fitted works for nenotr too:
+    trimcommand = f"python /opt/src/cleanfit/fitted/trim_file.py {fitter_file}"
 
     if mode == "before":
         trimcommand += f" {x1_max} 0"
@@ -391,7 +398,8 @@ def set_selected_2val(cols="y0", vals=0):
         for col,val in zip(cols,vals):
             source_rect.data[col][source_rect.selected.indices] = val
         update_rects(source_rect.data)
-    source_rect.selected.indices = []
+    convert2ints()
+    #source_rect.selected.indices = []
 
 def convert2ints():
     print("converting x0,x1,y0,y1 to integers")
@@ -401,7 +409,7 @@ def convert2ints():
            tmp = source_rect.data[col][source_rect.selected.indices]
            source_rect.data[col][source_rect.selected.indices] = np.round(tmp)
        update_rects(source_rect.data)
-    source_rect.selected.indices = []
+#    source_rect.selected.indices = []
 
 def b1delete_selected(event):
     print("delete selected rows")
