@@ -329,7 +329,7 @@ button_copy2all = bokeh.models.Button(label="Copy to all beams", button_type="su
 button_save_nanfile = bokeh.models.Button(label="Save data", button_type="success",width=cwidth2)
 button_trimbeforex1 = bokeh.models.Button(label="Trim data before max(x1)", button_type="success",width=cwidth2)
 button_trimafterx0 = bokeh.models.Button(label="Trim data after min(x0)", button_type="success",width=cwidth2)
-button_y0_0_y1_1000 = bokeh.models.Button(label="Selected y0 = 0,y1=1000", button_type="success",width=cwidth2)
+button_y0_0_y1_1000 = bokeh.models.Button(label="Selected y0 = -100,y1=1000", button_type="success",width=cwidth2)
 button_y1_1000 = bokeh.models.Button(label="Selected y1 = 1000", button_type="success",width=cwidth2)
 button_convert2ints = bokeh.models.Button(label="Convert 2 ints", button_type="success",width=cwidth2)
 
@@ -622,7 +622,7 @@ button_copy2all.on_click(b4copy2allbeams)
 button_save_nanfile.on_click(b5savedata)
 button_trimbeforex1.on_click(partial(trimdata, mode="before"))
 button_trimafterx0.on_click(partial(trimdata, mode="after"))
-button_y0_0_y1_1000.on_click(partial(set_selected_2val, cols=["y0","y1"], vals=[0,1000]))
+button_y0_0_y1_1000.on_click(partial(set_selected_2val, cols=["y0","y1"], vals=[-100,1000]))
 button_y1_1000.on_click(partial(set_selected_2val, cols=["y1"], vals=[1000]))
 button_convert2ints.on_click(convert2ints)
 
