@@ -269,8 +269,8 @@ palette = "Viridis256"
 palette = cc.rainbow4
 
 color_mapper = bokeh.models.mappers.LogColorMapper(palette=palette, low=10**float(vmin), high=10**float(vmax))
-seconds_axis = bokeh.models.DataRange1d(0, dw[0],range_padding = 0)
-p = bokeh.plotting.figure(plot_width = plot_width, plot_height=plot_height,
+seconds_axis = bokeh.models.DataRange1d(start=0, end=dw[0],range_padding = 0)
+p = bokeh.plotting.figure(width = plot_width, height=plot_height,
                           x_range=seconds_axis, y_range=[y[0], y[0]+dh[0]])
 p.title.text = ptitle[bmi_index]
 im = p.image(source=source_rti, color_mapper=color_mapper)
