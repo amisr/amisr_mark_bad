@@ -13,7 +13,7 @@ setup(
     #packages=find_packages(where="amisr_mark_bad"), # this only searches inside amisr_mark_bad
     packages=find_packages(),#exclude=["mark_data.py"]),
     install_requires=[
-            'bokeh','h5py','numpy'
+            'bokeh','h5py','numpy', 'colorcet'
             ],
     entry_points={  # Optional
         'console_scripts': [
