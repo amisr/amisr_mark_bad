@@ -331,6 +331,7 @@ button_trimbeforex1 = bokeh.models.Button(label="Trim data before max(x1)", butt
 button_trimafterx0 = bokeh.models.Button(label="Trim data after min(x0)", button_type="success",width=cwidth2)
 button_y0_0_y1_1000 = bokeh.models.Button(label="Selected y0 = -100,y1=1000", button_type="success",width=cwidth2)
 button_y1_1000 = bokeh.models.Button(label="Selected y1 = 1000", button_type="success",width=cwidth2)
+button_y1_m100 = bokeh.models.Button(label="Selected y1 = -100", button_type="success",width=cwidth2)
 button_convert2ints = bokeh.models.Button(label="Convert 2 ints", button_type="success",width=cwidth2)
 
 box_edit_tool1 = bokeh.models.BoxEditTool(renderers=[r1])
@@ -509,6 +510,7 @@ def disable_all():
     button_y0_0_y1_1000.disabled = True
     button_convert2ints.disabled = True
     button_y1_1000.disabled = True
+    button_y1_m100.disabled = True
     slider_vmin_vmax.disabled = True
     input_vmin.disabled = True
     input_vmax.disabled = True
@@ -624,6 +626,7 @@ button_trimbeforex1.on_click(partial(trimdata, mode="before"))
 button_trimafterx0.on_click(partial(trimdata, mode="after"))
 button_y0_0_y1_1000.on_click(partial(set_selected_2val, cols=["y0","y1"], vals=[-100,1000]))
 button_y1_1000.on_click(partial(set_selected_2val, cols=["y1"], vals=[1000]))
+button_y1_m100.on_click(partial(set_selected_2val, cols=["y1"], vals=[-100]))
 button_convert2ints.on_click(convert2ints)
 
 source_rect.on_change('data', on_change_data_source)
@@ -766,6 +769,7 @@ buttons_c2 = bokeh.layouts.column(button_trimbeforex1,
                                   button_trimafterx0,
                                   button_y0_0_y1_1000,
                                   button_y1_1000,
+                                  button_y1_m100,
                                   button_convert2ints)
 buttons = bokeh.layouts.row(buttons_c1, buttons_c2)
 blocks_ctrl = bokeh.layouts.row(data_table,buttons)
